@@ -16,7 +16,7 @@
 import math
 
 import torch
-from torch import Tensor, nn
+from torch import nn
 
 from ... import initialization as init
 from ...activations import ACT2FN
@@ -47,7 +47,7 @@ class ResNetConvLayer(nn.Module):
         self.normalization = nn.BatchNorm2d(out_channels)
         self.activation = ACT2FN[activation] if activation is not None else nn.Identity()
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         hidden_state = self.convolution(input)
         hidden_state = self.normalization(hidden_state)
         hidden_state = self.activation(hidden_state)
@@ -67,7 +67,7 @@ class ResNetEmbeddings(nn.Module):
         self.pooler = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.num_channels = config.num_channels
 
-    def forward(self, pixel_values: Tensor) -> Tensor:
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
@@ -89,7 +89,7 @@ class ResNetShortCut(nn.Module):
         self.convolution = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
         self.normalization = nn.BatchNorm2d(out_channels)
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         hidden_state = self.convolution(input)
         hidden_state = self.normalization(hidden_state)
         return hidden_state
@@ -194,7 +194,7 @@ class ResNetStage(nn.Module):
             first_layer, *[layer(out_channels, out_channels, activation=config.hidden_act) for _ in range(depth - 1)]
         )
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         hidden_state = input
         for layer in self.layers:
             hidden_state = layer(hidden_state)
@@ -219,12 +219,11 @@ class ResNetEncoder(nn.Module):
         for (in_channels, out_channels), depth in zip(in_out_channels, config.depths[1:]):
             self.stages.append(ResNetStage(config, in_channels, out_channels, depth=depth))
 
-    def forward(self, hidden_state: Tensor) -> Tensor:
+    def forward(self, hidden_state: torch.Tensor) -> torch.Tensor:
         for stage_module in self.stages:
             hidden_state = stage_module(hidden_state)
         return hidden_state
-
-
+        
 @auto_docstring
 class ResNetPreTrainedModel(PreTrainedModel):
     config: ResNetConfig
@@ -273,7 +272,7 @@ class ResNetModel(ResNetPreTrainedModel):
     @auto_docstring
     def forward(
         self,
-        pixel_values: Tensor,
+        pixel_values: torch.Tensor,
         **kwargs,
     ) -> BaseModelOutputWithPoolingAndNoAttention:
         embedding_output = self.embedder(pixel_values)
@@ -362,7 +361,7 @@ class ResNetBackbone(BackboneMixin, ResNetPreTrainedModel):
     @auto_docstring
     def forward(
         self,
-        pixel_values: Tensor,
+        pixel_values: torch.Tensor,
         **kwargs,
     ) -> BackboneOutput:
         r"""
